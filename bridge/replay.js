@@ -16,9 +16,11 @@
 //   node bridge/replay.js --duration 30       # compress past activity to 30s
 
 import { readdirSync, readFileSync, statSync, watch } from "node:fs";
-import { join, basename, dirname } from "node:path";
+import { join, basename, dirname, resolve } from "node:path";
 import { homedir } from "node:os";
 import { setTimeout as wait } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
+import { deriveTitle as sharedDeriveTitle } from "../extension/src/state/title-derivation.js";
 
 const args = parseArgs(process.argv.slice(2));
 const BRIDGE = args.bridge || "http://127.0.0.1:9876/event";
@@ -81,45 +83,9 @@ function readJsonl(path) {
   return out;
 }
 
-/** Extract a friendly title from the first user message of a subagent transcript. */
-function deriveTitle(firstUserContent) {
-  if (!firstUserContent) return null;
-  const txt = String(firstUserContent);
-
-  // "Story X.Y" or "Story X.Y-followup"
-  const storyMatch = txt.match(/Story\s+([0-9a-z\.\-]+(?:-followup)?)/i);
-
-  // "You are Atlas (BE) + Fae (FE)" / "You are Iris" / "You are Sec (Security) + Iris (Staff SWE)"
-  // Match a chain of "Name (role)" joined by " + ". Stops at the first
-  // lowercase/word that doesn't fit the pattern (e.g. "co-piloting").
-  const agentsMatch = txt.match(/You are\s+([A-Z][a-zA-Z]+(?:\s*\([^)]*\))?(?:\s*\+\s*[A-Z][a-zA-Z]+(?:\s*\([^)]*\))?)*)/);
-
-  // Component name from story file: e.g. .../stories/2-3-audittraildrawer-component-on-dealer-detail.md
-  const componentMatch = txt.match(/stories\/[\d\.\-]+-([a-z][a-z0-9\-]+?)(?:[\.\-]|\b)/i);
-
-  const cleanAgents = (agentsMatch?.[1] ?? "")
-    .replace(/\s*\([^)]*\)/g, "")        // drop "(BE)", "(Security)" etc.
-    .replace(/\s+/g, "")                 // "Atlas+Fae"
-    .replace(/\++$/, "");                // trailing +
-  const componentTitle = componentMatch ? toTitleCase(componentMatch[1]) : "";
-
-  if (cleanAgents && storyMatch && componentTitle) {
-    return `${cleanAgents} Story ${storyMatch[1]} ${componentTitle}`;
-  }
-  if (cleanAgents && storyMatch) {
-    return `${cleanAgents} Story ${storyMatch[1]}`;
-  }
-  if (storyMatch && componentTitle) {
-    return `Story ${storyMatch[1]} ${componentTitle}`;
-  }
-  if (cleanAgents) return cleanAgents;
-  if (storyMatch) return `Story ${storyMatch[1]}`;
-  return txt.replace(/\s+/g, " ").slice(0, 60).trim();
-}
-
-function toTitleCase(slug) {
-  return slug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("");
-}
+// Use the shared title derivation logic. Same regexes power the live bridge
+// client AND this replay script, so names match across both code paths.
+const deriveTitle = sharedDeriveTitle;
 
 function getFirstUserContent(entries) {
   for (const e of entries) {

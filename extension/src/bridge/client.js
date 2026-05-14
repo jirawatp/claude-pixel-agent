@@ -4,6 +4,7 @@
 import { eventToBubble, EVENT_TYPES } from "./events.js";
 import { upsertAgent } from "../state/store.js";
 import { defaultCustomization } from "../renderer/sprite-factory.js";
+import { deriveTitle, extractPersonaSummary } from "../state/title-derivation.js";
 import { PALETTE } from "../../assets/palette/palette.js";
 import { ZONES, zoneForTool, zoneForRole, pickSpotInZone, jitter } from "../renderer/zones.js";
 import { roleForName } from "../state/roles.js";
@@ -135,11 +136,13 @@ export class BridgeClient {
     switch (ev.type) {
       case EVENT_TYPES.SESSION_START:
       case EVENT_TYPES.SUBAGENT_START: {
-        // For SubagentStart, the agent name + role may come from the payload.
+        // For SubagentStart, prefer the persona derived from the prompt
+        // (BMad personas are embedded in prompts; subagent_type is usually
+        // "general-purpose" and not useful as a name).
         if (ev.type === EVENT_TYPES.SUBAGENT_START) {
-          const sub = ev.agent_name ?? ev.subagent_type;
-          if (sub && !c.titleLocked) {
-            c.name = truncateTitle(sub);
+          const personaName = bestSubagentName(ev);
+          if (personaName && !c.titleLocked) {
+            c.name = personaName;
             c.role = roleForName(c.name);
             c.titleLocked = true;
             this.releaseHomeDesk(sessionId);
@@ -147,7 +150,7 @@ export class BridgeClient {
             this.renderer.walkTo(sessionId, newHome.x, newHome.y);
             upsertAgent(sessionId, { name: c.name });
           }
-          if (ev.prompt) c.persona = truncatePersona(ev.prompt);
+          if (ev.prompt) c.persona = extractPersonaSummary(ev.prompt);
           c.parentId = ev.parentId ?? null;
         } else {
           this.renderer.walkTo(sessionId, home.x, home.y);
@@ -157,10 +160,10 @@ export class BridgeClient {
       }
       case EVENT_TYPES.USER_PROMPT: {
         // Capture the first user prompt as the agent's persona / task brief.
-        if (!c.persona && ev.prompt) c.persona = truncatePersona(ev.prompt);
+        if (!c.persona && ev.prompt) c.persona = extractPersonaSummary(ev.prompt);
         // Use first non-empty user prompt as the agent's display title.
         if (!c.titleLocked && ev.prompt) {
-          const newName = truncateTitle(ev.prompt);
+          const newName = deriveTitle(ev.prompt) || truncateTitle(ev.prompt);
           c.name = newName;
           c.role = roleForName(newName);
           c.titleLocked = true;
@@ -177,6 +180,14 @@ export class BridgeClient {
         c.toolHistogram[ev.tool_name] = (c.toolHistogram[ev.tool_name] ?? 0) + 1;
         c.currentTool = ev.tool_name;
         c.statusColor = PALETTE.statusWorking;
+
+        // Special case: the Task tool spawns a subagent. Synthesize a
+        // SubagentStart so the child gets its own pixel character — Claude
+        // Code may not fire a separate SubagentStart hook.
+        if (ev.tool_name === "Task" && ev.tool_input) {
+          this.handleSyntheticSubagentStart(sessionId, ev.tool_input);
+        }
+
         // Route to the right room for this tool.
         const targetZone = zoneForTool(ev.tool_name);
         if (targetZone) {
@@ -270,6 +281,58 @@ export class BridgeClient {
   stopSession(sessionId) {
     this.handleEvent({ type: EVENT_TYPES.STOP, sessionId, ts: Date.now() });
   }
+
+  /**
+   * Called when a parent agent invokes the Task tool. The Task tool spawns
+   * a subagent internally; in Claude Code's hook stream we usually see this
+   * as a PreToolUse on the parent (with subagent_type + prompt as input),
+   * not as a separate SubagentStart event. So we synthesize a SubagentStart
+   * for the child so it appears as its own pixel character.
+   *
+   * Stable subagent id = `${parentId}::task-${hash(prompt)}` so re-running the
+   * same Task doesn't spawn duplicate ghosts.
+   */
+  handleSyntheticSubagentStart(parentSessionId, taskInput) {
+    const prompt = taskInput.prompt ?? taskInput.description ?? "";
+    const stype  = taskInput.subagent_type ?? "general-purpose";
+    if (!prompt && stype === "general-purpose") return;
+    const childId = `${parentSessionId}::task-${shortHash(prompt + "|" + stype)}`;
+    if (this.renderer.getCharacter(childId)) return; // already spawned
+    this.handleEvent({
+      type: EVENT_TYPES.SUBAGENT_START,
+      sessionId: childId,
+      parentId: parentSessionId,
+      subagent_type: stype,
+      prompt,
+      ts: Date.now()
+    });
+  }
+}
+
+function shortHash(s) {
+  let h = 0;
+  for (let i = 0; i < (s ?? "").length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h).toString(36).slice(0, 8);
+}
+
+/**
+ * Pick the best name for a subagent character.
+ *
+ *   1. Use the persona derived from the prompt ("Atlas+Fae Story 2.3 …")
+ *      — this is the BMad pattern: subagent_type is "general-purpose" and
+ *      the real persona lives in the prompt.
+ *   2. Fall back to subagent_type if it's something other than the generic
+ *      "general-purpose" / "agent" defaults.
+ *   3. Last resort: ev.agent_name or "subagent".
+ */
+function bestSubagentName(ev) {
+  const fromPrompt = deriveTitle(ev.prompt);
+  if (fromPrompt) return fromPrompt;
+  const stype = ev.subagent_type;
+  if (stype && !/^(general-?purpose|agent|default)$/i.test(stype)) return stype;
+  return ev.agent_name ?? "subagent";
 }
 
 function truncateTitle(s) {
