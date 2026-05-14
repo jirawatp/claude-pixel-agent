@@ -325,7 +325,7 @@ function renderAgentPanel(agents) {
 }
 
 function renderRow(a) {
-  const role = a.role ?? { label: "—", full: "—", color: "#888" };
+  const role = a.role ?? { label: "AGENT", full: "Claude Code agent", color: "#6c719c" };
   const expanded = a.id === expandedAgentId;
   const card = el("div", `agent-card ${expanded ? "is-expanded" : ""} ${a.status === "done" ? "is-done" : ""}`);
   card.dataset.agentId = a.id;
