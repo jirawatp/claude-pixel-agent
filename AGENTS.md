@@ -145,21 +145,36 @@ When run outside the extension runtime (`http://localhost:8123/dashboard/...`),
 ## Event protocol (bridge ↔ extension)
 
 All events share `type`, `sessionId`, and `ts`. See `extension/src/bridge/events.js`.
+The bridge installs **17 Claude Code hook events** and translates each via
+`translateHook()` in `bridge/server.js`.
 
-| `type`           | When                            | Extra fields                      | Effect                          |
-| ---------------- | ------------------------------- | --------------------------------- | ------------------------------- |
-| `session_start`  | New Claude Code session begins  | `cwd`, `agent_name?`              | Spawn character, walk to home desk |
-| `user_prompt`    | User submits a prompt           | `prompt`                          | Set agent title + capture persona |
-| `pre_tool_use`   | About to call a tool            | `tool_name`, `tool_input`         | Increment counter, route to zone  |
-| `post_tool_use`  | Tool finished                   | `tool_name`, `success`            | Return to home desk             |
-| `thinking`       | Synthetic thinking event        | `text`                            | Thought bubble                  |
-| `assistant_msg`  | Agent reply                     | `text`                            | Speech bubble                   |
-| `stop`           | Agent stopped                   | —                                 | Walk to Coffee Room             |
-| `session_end`    | Session torn down               | —                                 | Walk off-screen, remove         |
+| `type`              | Source hook                                    | Effect                              |
+| ------------------- | ---------------------------------------------- | ----------------------------------- |
+| `session_start`     | `SessionStart`                                 | Spawn character, walk to home desk  |
+| `session_end`       | `SessionEnd`                                   | Walk off-screen, remove             |
+| `user_prompt`       | `UserPromptSubmit`                             | Set agent title + capture persona   |
+| `pre_tool_use`      | `PreToolUse`                                   | Increment counter, route to zone    |
+| `post_tool_use`     | `PostToolUse` / `PostToolUseFailure`           | Return to home desk; failure→error  |
+| `subagent_start`    | `SubagentStart`                                | Spawn subagent character (BMad-style) |
+| `subagent_stop`     | `SubagentStop`                                 | Walk subagent to coffee             |
+| `task_created`      | `TaskCreated`                                  | Parent walks to meeting room        |
+| `task_completed`    | `TaskCompleted`                                | Parent returns to home desk         |
+| `stop`              | `Stop` / `StopFailure`                         | Walk to coffee (error if failure)   |
+| `permission_request`| `PermissionRequest`                            | Thought bubble, amber status        |
+| `permission_denied` | `PermissionDenied`                             | Error status                        |
+| `pre_compact`       | `PreCompact`                                   | Walk to library, "Compacting…"      |
+| `post_compact`      | `PostCompact`                                  | "Compacted ✓" thought               |
+| `assistant_msg`     | `Notification`                                 | Speech bubble                       |
+| `thinking`          | (synthetic — bridge emits)                     | Thought bubble                      |
 
-The bridge translates Claude Code's native hook payload shape
-(`hook_event_name`, `tool_name`, `tool_input`, `prompt`, `cwd`) into this
-schema in `translateHook()`.
+### To add a new event:
+
+1. Add the hook name to `HOOK_EVENTS` in `bridge/server.js`.
+2. Add a `case` in `translateHook()` that returns `{ ...base, type: "<your_type>", ... }`.
+3. Add `EVENT_TYPES.YOUR_TYPE = "<your_type>"` in `extension/src/bridge/events.js`.
+4. Add a bubble mapping in `eventToBubble()`.
+5. Add a handler in `BridgeClient.handleEvent()` for any movement/state effect.
+6. Add a description in `HOOK_DESCRIPTIONS` (dashboard.js) so the Connection panel shows it.
 
 ---
 

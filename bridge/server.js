@@ -25,7 +25,25 @@ const REPO_ROOT = resolve(__dirname, "..");
 const HOOK_SCRIPT_UNIX = resolve(REPO_ROOT, "hooks", "notify.sh");
 const HOOK_SCRIPT_WIN  = resolve(REPO_ROOT, "hooks", "notify.ps1");
 const SETTINGS_PATH    = join(homedir(), ".claude", "settings.json");
-const HOOK_EVENTS = ["UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "SessionEnd"];
+const HOOK_EVENTS = [
+  // Session lifecycle
+  "SessionStart", "SessionEnd",
+  // User input
+  "UserPromptSubmit",
+  // Tool calls (and failures)
+  "PreToolUse", "PostToolUse", "PostToolUseFailure",
+  // Subagent / Task lifecycle (BMad-style multi-agent flows)
+  "SubagentStart", "SubagentStop",
+  "TaskCreated", "TaskCompleted",
+  // Agent stop (success + failure)
+  "Stop", "StopFailure",
+  // Permissions
+  "PermissionRequest", "PermissionDenied",
+  // Context compaction
+  "PreCompact", "PostCompact",
+  // Misc
+  "Notification"
+];
 
 const clients = new Set();
 
@@ -240,36 +258,43 @@ function readBody(req) {
 // Translate a Claude Code hook payload (or our own pre-normalized event)
 // into the schema the extension expects.
 function translateHook(payload) {
-  // Claude Code hook payloads contain hook_event_name and a flat object
-  // with the contextual fields. The exact shape varies by hook type.
-  // We are defensive — anything missing just becomes a softer event.
+  // Claude Code hook payloads contain hook_event_name + flat context fields.
+  // The exact shape varies per event; this stays defensive.
 
   const eventName = payload.hook_event_name || payload.event || payload.type;
   const sessionId = payload.session_id || payload.sessionId || "default";
   const cwd       = payload.cwd || payload.working_directory;
   const ts        = Date.now();
-  const base = { sessionId, cwd, ts, agent_name: payload.agent_name };
+  // For Subagent* events the agent's own session_id is usually the subagent id,
+  // and the parent is referenced separately.
+  const parentId  = payload.parent_session_id || payload.parentSessionId || payload.parent_id || null;
+  const base = { sessionId, cwd, ts, agent_name: payload.agent_name, parentId };
 
   switch (eventName) {
+    // ── Session lifecycle ──
+    case "SessionStart":
+    case "session_start":
+      return { ...base, type: "session_start" };
+
+    case "SessionEnd":
+    case "session_end":
+      return { ...base, type: "session_end" };
+
     case "UserPromptSubmit":
     case "user_prompt":
-      // First user prompt for a new session is treated as session_start too.
       return {
         ...base,
         type: "user_prompt",
         prompt: payload.prompt || payload.user_prompt || payload.message
       };
 
-    case "SessionStart":
-    case "session_start":
-      return { ...base, type: "session_start" };
-
+    // ── Tool calls ──
     case "PreToolUse":
     case "pre_tool_use":
       return {
         ...base,
         type: "pre_tool_use",
-        tool_name: payload.tool_name || payload.tool || "tool",
+        tool_name:  payload.tool_name || payload.tool || "tool",
         tool_input: payload.tool_input || payload.input || {}
       };
 
@@ -282,17 +307,87 @@ function translateHook(payload) {
         success:   payload.success !== false
       };
 
+    case "PostToolUseFailure":
+      return {
+        ...base,
+        type: "post_tool_use",
+        tool_name: payload.tool_name || payload.tool || "tool",
+        success:   false,
+        error:     payload.error || payload.message || "tool failed"
+      };
+
+    // ── Subagent / Task lifecycle ──
+    // A "Subagent" in Claude Code is a child session spawned via the Task tool.
+    // We model each subagent as its own pixel character; the spawn references
+    // the parent so we can show a "delegated" link in the activity ticker.
+    case "SubagentStart": {
+      const sub = payload.subagent || payload.agent || {};
+      return {
+        ...base,
+        type: "subagent_start",
+        subagent_type: sub.type || payload.subagent_type || payload.agent_type,
+        prompt: payload.prompt || sub.description || payload.description,
+        agent_name: payload.agent_name || sub.name
+      };
+    }
+    case "SubagentStop":
+      return {
+        ...base,
+        type: "subagent_stop",
+        success: payload.success !== false,
+        error:   payload.error || null
+      };
+
+    case "TaskCreated":
+      return {
+        ...base,
+        type: "task_created",
+        subagent_id: payload.subagent_id || payload.task_id,
+        subagent_type: payload.subagent_type || payload.agent_type,
+        description: payload.description || payload.prompt
+      };
+    case "TaskCompleted":
+      return {
+        ...base,
+        type: "task_completed",
+        subagent_id: payload.subagent_id || payload.task_id,
+        success: payload.success !== false,
+        summary: payload.summary || payload.result
+      };
+
+    // ── Agent stop ──
     case "Stop":
     case "stop":
       return { ...base, type: "stop" };
 
-    case "SessionEnd":
-    case "session_end":
-      return { ...base, type: "session_end" };
+    case "StopFailure":
+      return { ...base, type: "stop", failure: true, error: payload.error || payload.message };
+
+    // ── Permissions ──
+    case "PermissionRequest":
+      return {
+        ...base,
+        type: "permission_request",
+        tool_name: payload.tool_name || payload.tool,
+        reason:    payload.reason || payload.message
+      };
+    case "PermissionDenied":
+      return {
+        ...base,
+        type: "permission_denied",
+        tool_name: payload.tool_name || payload.tool,
+        reason:    payload.reason || payload.message
+      };
+
+    // ── Context compaction ──
+    case "PreCompact":
+      return { ...base, type: "pre_compact" };
+    case "PostCompact":
+      return { ...base, type: "post_compact", saved_tokens: payload.saved_tokens };
 
     case "Notification":
     case "notification":
-      // Free-form text we can show as a speech bubble.
+      // Free-form text shown as a speech bubble.
       return {
         ...base,
         type: "assistant_msg",
@@ -300,7 +395,6 @@ function translateHook(payload) {
       };
 
     default:
-      // Unknown — pass through as a thinking event so something shows up.
       if (payload.text) {
         return { ...base, type: "thinking", text: String(payload.text).slice(0, 200) };
       }

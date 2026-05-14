@@ -133,9 +133,25 @@ export class BridgeClient {
     const home = this.homeDeskFor(sessionId, c.name);
 
     switch (ev.type) {
-      case EVENT_TYPES.SESSION_START: {
-        // Re-derive home desk in case name changed.
-        this.renderer.walkTo(sessionId, home.x, home.y);
+      case EVENT_TYPES.SESSION_START:
+      case EVENT_TYPES.SUBAGENT_START: {
+        // For SubagentStart, the agent name + role may come from the payload.
+        if (ev.type === EVENT_TYPES.SUBAGENT_START) {
+          const sub = ev.agent_name ?? ev.subagent_type;
+          if (sub && !c.titleLocked) {
+            c.name = truncateTitle(sub);
+            c.role = roleForName(c.name);
+            c.titleLocked = true;
+            this.releaseHomeDesk(sessionId);
+            const newHome = this.homeDeskFor(sessionId, c.name);
+            this.renderer.walkTo(sessionId, newHome.x, newHome.y);
+            upsertAgent(sessionId, { name: c.name });
+          }
+          if (ev.prompt) c.persona = truncatePersona(ev.prompt);
+          c.parentId = ev.parentId ?? null;
+        } else {
+          this.renderer.walkTo(sessionId, home.x, home.y);
+        }
         c.endedAt = null;
         break;
       }
@@ -183,16 +199,49 @@ export class BridgeClient {
         }
         break;
       }
-      case EVENT_TYPES.STOP: {
+      case EVENT_TYPES.STOP:
+      case EVENT_TYPES.SUBAGENT_STOP: {
         c.endedAt = Date.now();
         c.currentTool = null;
-        c.statusColor = PALETTE.statusIdle;
+        c.statusColor = ev.success === false ? PALETTE.statusError : PALETTE.statusIdle;
         // Walk to the coffee room to take a break.
         const coffeeSpot = pickSpotInZone("coffee", new Set());
         const j = jitter(coffeeSpot, 1.5);
         this.renderer.walkTo(sessionId, j.x, j.y);
         break;
       }
+
+      case EVENT_TYPES.TASK_CREATED: {
+        // Parent agent delegated work — walk them to the meeting room briefly.
+        const spot = pickSpotInZone("meeting", new Set());
+        const j = jitter(spot, 1.2);
+        this.renderer.walkTo(sessionId, j.x, j.y);
+        break;
+      }
+      case EVENT_TYPES.TASK_COMPLETED: {
+        // Parent returns to its home desk.
+        this.renderer.walkTo(sessionId, home.x, home.y);
+        break;
+      }
+
+      case EVENT_TYPES.PERMISSION_REQUEST: {
+        c.statusColor = PALETTE.statusThinking;
+        break;
+      }
+      case EVENT_TYPES.PERMISSION_DENIED: {
+        c.statusColor = PALETTE.statusError;
+        break;
+      }
+
+      case EVENT_TYPES.PRE_COMPACT:
+      case EVENT_TYPES.POST_COMPACT: {
+        // Visualize compaction by walking to the library briefly.
+        const spot = pickSpotInZone("library", new Set());
+        const j = jitter(spot, 1.0);
+        this.renderer.walkTo(sessionId, j.x, j.y);
+        break;
+      }
+
       case EVENT_TYPES.SESSION_END: {
         c.endedAt = Date.now();
         c.currentTool = null;

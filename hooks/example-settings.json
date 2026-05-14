@@ -1,45 +1,22 @@
 {
-  "_comment": "Drop these blocks into ~/.claude/settings.json (merge with existing 'hooks'). Update the command path to where you cloned this repo.",
+  "_comment": "Drop these blocks into ~/.claude/settings.json (merge with existing 'hooks'). Update the command path to where you cloned this repo. The dashboard's Connection → Install hooks button does the merge for you automatically.",
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
-        ]
-      }
-    ]
+    "SessionStart":       [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "SessionEnd":         [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "UserPromptSubmit":   [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "PreToolUse":         [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "PostToolUse":        [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "PostToolUseFailure": [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "SubagentStart":      [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "SubagentStop":       [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "TaskCreated":        [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "TaskCompleted":      [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "Stop":               [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "StopFailure":        [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "PermissionRequest":  [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "PermissionDenied":   [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "PreCompact":         [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "PostCompact":        [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }],
+    "Notification":       [{ "matcher": ".*", "hooks": [{ "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }] }]
   }
 }

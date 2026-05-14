@@ -14,14 +14,35 @@
 //   - session_end    : final cleanup
 
 export const EVENT_TYPES = {
-  SESSION_START: "session_start",
-  USER_PROMPT:   "user_prompt",
-  THINKING:      "thinking",
-  PRE_TOOL_USE:  "pre_tool_use",
-  POST_TOOL_USE: "post_tool_use",
-  ASSISTANT_MSG: "assistant_msg",
-  STOP:          "stop",
-  SESSION_END:   "session_end"
+  // Session lifecycle
+  SESSION_START:   "session_start",
+  SESSION_END:     "session_end",
+  USER_PROMPT:     "user_prompt",
+
+  // Tool calls
+  PRE_TOOL_USE:    "pre_tool_use",
+  POST_TOOL_USE:   "post_tool_use",
+
+  // Agent narration
+  THINKING:        "thinking",
+  ASSISTANT_MSG:   "assistant_msg",
+
+  // Stop
+  STOP:            "stop",
+
+  // Subagent / Task lifecycle
+  SUBAGENT_START:  "subagent_start",
+  SUBAGENT_STOP:   "subagent_stop",
+  TASK_CREATED:    "task_created",
+  TASK_COMPLETED:  "task_completed",
+
+  // Permissions
+  PERMISSION_REQUEST: "permission_request",
+  PERMISSION_DENIED:  "permission_denied",
+
+  // Context compaction
+  PRE_COMPACT:     "pre_compact",
+  POST_COMPACT:    "post_compact"
 };
 
 // Map tool names to short human-readable activity verbs.
@@ -71,7 +92,35 @@ export function eventToBubble(ev) {
     case EVENT_TYPES.ASSISTANT_MSG:
       return { text: truncate(ev.text ?? "", 120), kind: "speech", activity: "Replying" };
     case EVENT_TYPES.STOP:
-      return { text: "All done!", kind: "speech", activity: "Idle", face: "happy" };
+      return ev.failure
+        ? { text: `Stopped with error: ${truncate(ev.error ?? "", 60)}`, kind: "speech", activity: "Error" }
+        : { text: "All done!", kind: "speech", activity: "Idle", face: "happy" };
+
+    case EVENT_TYPES.SUBAGENT_START:
+      return {
+        text: `Hi! I'm ${truncate(ev.agent_name ?? ev.subagent_type ?? "a subagent", 40)}.`,
+        kind: "speech", activity: "Booting"
+      };
+    case EVENT_TYPES.SUBAGENT_STOP:
+      return ev.success
+        ? { text: "Subagent done!", kind: "speech", activity: "Done", face: "happy" }
+        : { text: `Subagent failed: ${truncate(ev.error ?? "", 40)}`, kind: "speech", activity: "Error" };
+
+    case EVENT_TYPES.TASK_CREATED:
+      return { text: `Delegating: ${truncate(ev.description ?? ev.subagent_type ?? "", 50)}`, kind: "speech", activity: "Delegating" };
+    case EVENT_TYPES.TASK_COMPLETED:
+      return { text: ev.success ? "Task done ✓" : "Task failed ✗", kind: "speech", activity: ev.success ? "Done" : "Error" };
+
+    case EVENT_TYPES.PERMISSION_REQUEST:
+      return { text: `May I run ${ev.tool_name ?? "this tool"}?`, kind: "thought", activity: "Waiting" };
+    case EVENT_TYPES.PERMISSION_DENIED:
+      return { text: `Permission denied: ${ev.tool_name ?? ""}`, kind: "speech", activity: "Blocked" };
+
+    case EVENT_TYPES.PRE_COMPACT:
+      return { text: "Compacting context…", kind: "thought", activity: "Compacting" };
+    case EVENT_TYPES.POST_COMPACT:
+      return { text: `Compacted ✓`, kind: "thought", activity: "Compacted" };
+
     case EVENT_TYPES.SESSION_END:
       return null;
     default:

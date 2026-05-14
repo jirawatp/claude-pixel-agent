@@ -185,21 +185,63 @@ claude-pixel-agent/
 ## Event protocol
 
 Events sent from the bridge to the extension over WebSocket. All include
-`type`, `sessionId`, and `ts`.
+`type`, `sessionId`, and `ts`. The bridge listens for **17 Claude Code hook
+events** and translates each into one of these normalized types.
 
-| `type`           | Extra fields                                | Bubble                          |
-| ---------------- | ------------------------------------------- | ------------------------------- |
-| `session_start`  | `cwd`, `agent_name?`                        | "Hi! Booting up…"               |
-| `user_prompt`    | `prompt`                                    | thought: `User: "..."`         |
-| `thinking`       | `text`                                      | thought: short summary          |
-| `pre_tool_use`   | `tool_name`, `tool_input`                   | "Reading `src/foo.ts`"          |
-| `post_tool_use`  | `tool_name`, `success`                      | "Reading ✓"                    |
-| `assistant_msg`  | `text`                                      | speech: assistant reply         |
-| `stop`           | —                                           | "All done!" (😊)               |
-| `session_end`    | —                                           | character walks off-screen      |
+### Session lifecycle
 
-The bridge translates Claude Code's native hook payloads (`PreToolUse`,
-`PostToolUse`, etc.) into this shape.
+| `type`            | Hook                       | Effect                            |
+| ----------------- | -------------------------- | --------------------------------- |
+| `session_start`   | `SessionStart`             | Spawn character, walk to home desk |
+| `session_end`     | `SessionEnd`               | Walk off-screen, remove           |
+| `user_prompt`     | `UserPromptSubmit`         | Capture title + persona           |
+
+### Tool calls
+
+| `type`            | Hook                       | Effect                            |
+| ----------------- | -------------------------- | --------------------------------- |
+| `pre_tool_use`    | `PreToolUse`               | Increment counter, route to zone  |
+| `post_tool_use`   | `PostToolUse` / `PostToolUseFailure` | Return to home desk; failure flips status to error |
+
+### Subagent / Task lifecycle (BMad-style multi-agent flows)
+
+| `type`            | Hook                       | Effect                            |
+| ----------------- | -------------------------- | --------------------------------- |
+| `subagent_start`  | `SubagentStart`            | New pixel character for the subagent (uses `subagent_type` as name) |
+| `subagent_stop`   | `SubagentStop`             | Walk to coffee; flip to error on failure |
+| `task_created`    | `TaskCreated`              | Parent agent walks to meeting room |
+| `task_completed`  | `TaskCompleted`            | Parent walks back to home desk    |
+
+### Stop / failure
+
+| `type`            | Hook                                          | Effect                            |
+| ----------------- | --------------------------------------------- | --------------------------------- |
+| `stop`            | `Stop` (`failure: true` on `StopFailure`)     | Walk to coffee room               |
+
+### Permissions
+
+| `type`              | Hook                | Effect                            |
+| ------------------- | ------------------- | --------------------------------- |
+| `permission_request`| `PermissionRequest` | Thought bubble, amber status      |
+| `permission_denied` | `PermissionDenied`  | Error status                      |
+
+### Context compaction
+
+| `type`         | Hook         | Effect                                  |
+| -------------- | ------------ | --------------------------------------- |
+| `pre_compact`  | `PreCompact` | "Compacting…" thought, walk to library  |
+| `post_compact` | `PostCompact`| "Compacted ✓" thought                   |
+
+### Messages
+
+| `type`         | Hook           | Effect                                  |
+| -------------- | -------------- | --------------------------------------- |
+| `assistant_msg`| `Notification` | Speech bubble with the text             |
+| `thinking`     | (synthetic)    | Thought bubble                          |
+
+Hooks are wired up automatically when you click **Install hooks automatically**
+in the Connection tab. Existing hooks (e.g. GitKraken) are preserved and the
+settings file is backed up before any change.
 
 ## Privacy
 

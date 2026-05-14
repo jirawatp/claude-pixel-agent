@@ -735,13 +735,7 @@ function buildBridgePanel() {
         <span class="eyebrow">Claude Code hooks</span>
         <span class="badge outline" id="hooks-badge">CHECKING…</span>
       </div>
-      <div class="hooks-list" id="hooks-list">
-        <div class="hook-row"><span class="dot"></span><span class="hook-name">UserPromptSubmit</span><span class="hook-desc">fires when you submit a prompt</span></div>
-        <div class="hook-row"><span class="dot"></span><span class="hook-name">PreToolUse</span><span class="hook-desc">fires before each tool call</span></div>
-        <div class="hook-row"><span class="dot"></span><span class="hook-name">PostToolUse</span><span class="hook-desc">fires after each tool call</span></div>
-        <div class="hook-row"><span class="dot"></span><span class="hook-name">Stop</span><span class="hook-desc">fires when an agent stops</span></div>
-        <div class="hook-row"><span class="dot"></span><span class="hook-name">SessionEnd</span><span class="hook-desc">fires when the session ends</span></div>
-      </div>
+      <div class="hooks-list" id="hooks-list"></div>
       <div class="row-actions" id="hooks-actions"></div>
       <p class="muted-tiny">
         One click adds <code>notify.sh</code> to <code>~/.claude/settings.json</code> for every Claude Code event we visualize.
@@ -777,26 +771,52 @@ function bridgeHttpBase() {
   return ws.replace(/^ws:/, "http:").replace(/^wss:/, "https:").replace(/\/ws\/?$/, "");
 }
 
+const HOOK_DESCRIPTIONS = {
+  SessionStart:       "fires when a Claude Code session starts",
+  SessionEnd:         "fires when the session ends",
+  UserPromptSubmit:   "fires when you submit a prompt",
+  PreToolUse:         "fires before each tool call",
+  PostToolUse:        "fires after each tool call",
+  PostToolUseFailure: "fires when a tool call errors",
+  SubagentStart:      "fires when a subagent (Task) spawns",
+  SubagentStop:       "fires when a subagent finishes",
+  TaskCreated:        "fires when a Task is delegated",
+  TaskCompleted:      "fires when a delegated Task returns",
+  Stop:               "fires when an agent stops",
+  StopFailure:        "fires when an agent stops with an error",
+  PermissionRequest:  "fires when permission is requested",
+  PermissionDenied:   "fires when permission is denied",
+  PreCompact:         "fires before context compaction",
+  PostCompact:        "fires after context compaction",
+  Notification:       "fires on assistant notifications"
+};
+
 async function refreshHookStatus() {
-  const badge = document.getElementById("hooks-badge");
-  const list  = document.getElementById("hooks-list");
+  const badge   = document.getElementById("hooks-badge");
+  const list    = document.getElementById("hooks-list");
   const actions = document.getElementById("hooks-actions");
   if (!badge || !list) return;
   try {
     const resp = await fetch(`${bridgeHttpBase()}/hook-status`);
     const data = await resp.json();
-    const all = data.installed;
+    const all  = data.installed;
+
     badge.classList.remove("outline");
     badge.classList.add(all ? "live" : "outline");
     badge.textContent = all ? "INSTALLED" : "NOT INSTALLED";
 
-    [...list.children].forEach((row) => {
-      const name = row.querySelector(".hook-name")?.textContent;
-      const on = data.per_event?.[name];
-      const dot = row.querySelector(".dot");
-      dot.classList.remove("green", "red");
-      dot.classList.add(on ? "green" : "red");
-    });
+    // Build rows from data.per_event (authoritative — bridge knows what it watches).
+    list.innerHTML = "";
+    for (const [name, on] of Object.entries(data.per_event ?? {})) {
+      const desc = HOOK_DESCRIPTIONS[name] ?? "";
+      const row = document.createElement("div");
+      row.className = "hook-row";
+      row.innerHTML = `
+        <span class="dot ${on ? "green" : "red"}"></span>
+        <span class="hook-name">${esc(name)}</span>
+        <span class="hook-desc">${esc(desc)}</span>`;
+      list.appendChild(row);
+    }
 
     actions.innerHTML = all
       ? `<button class="btn" id="hooks-refresh">Refresh</button>
@@ -815,6 +835,7 @@ async function refreshHookStatus() {
   } catch {
     badge.textContent = "BRIDGE OFFLINE";
     badge.classList.add("outline");
+    list.innerHTML = "";
     actions.innerHTML = `<button class="btn ghost" disabled>Bridge unreachable</button>`;
   }
 }

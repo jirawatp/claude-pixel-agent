@@ -39,11 +39,21 @@ export function workIndicator(a) {
 
 /** Classify a tool/event into the ticker chip color bucket. */
 export function tickerKind(eventType, toolName) {
-  if (eventType === "post_tool_use") return "post";
-  if (eventType === "assistant_msg") return "say";
-  if (eventType === "thinking")      return "think";
-  if (eventType === "stop")          return "stop";
-  if (toolName === "Task")           return "task";
+  if (eventType === "post_tool_use")  return "post";
+  if (eventType === "assistant_msg")  return "say";
+  if (eventType === "thinking")       return "think";
+  if (eventType === "stop")           return "stop";
+  if (eventType === "subagent_start") return "task";
+  if (eventType === "subagent_stop")  return "stop";
+  if (eventType === "task_created")   return "task";
+  if (eventType === "task_completed") return "task";
+  if (eventType === "permission_request") return "think";
+  if (eventType === "permission_denied")  return "stop";
+  if (eventType === "pre_compact" || eventType === "post_compact") return "walk";
+  if (eventType === "session_start")  return "walk";
+  if (eventType === "session_end")    return "stop";
+  if (eventType === "user_prompt")    return "say";
+  if (toolName === "Task")            return "task";
   return "pre";
 }
 
