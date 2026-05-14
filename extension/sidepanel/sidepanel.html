@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pixel Agents</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <div class="sidepanel-frame">
+    <header class="sp-bar">
+      <div class="sp-brand">
+        <svg viewBox="0 0 16 16" width="14" height="14" class="pixel-art" aria-hidden="true">
+          <rect x="1" y="2"  width="14" height="9" fill="#1a1d3a" />
+          <rect x="2" y="3"  width="12" height="7" fill="#0a0b18" />
+          <rect x="3" y="4"  width="10" height="5" fill="#4ed4ff" />
+          <rect x="6" y="5"  width="4"  height="2" fill="#a48cff" />
+          <rect x="6" y="7"  width="4"  height="1" fill="#ff5ec4" />
+          <rect x="6" y="11" width="4"  height="2" fill="#1a1d3a" />
+          <rect x="3" y="13" width="10" height="2" fill="#1a1d3a" />
+        </svg>
+        <span>Pixel Agents</span>
+      </div>
+      <div class="sp-actions">
+        <span class="dot pulse" id="status-dot" title="Bridge status"></span>
+        <button class="icon-btn" id="open-dashboard" title="Open full dashboard">⤢</button>
+      </div>
+    </header>
+
+    <main class="sp-body">
+      <div class="sp-office">
+        <div class="crt-screen">
+          <canvas id="office" width="384" height="256"></canvas>
+          <div class="scanlines"></div>
+          <div class="crt-vignette"></div>
+        </div>
+      </div>
+
+      <ul id="agent-list" class="sp-list scrollable"></ul>
+
+      <p class="empty muted-tiny" id="empty-hint">
+        No agents yet. Start a Claude Code session, or
+        <button class="link" id="demo-btn">load demo</button>.
+      </p>
+    </main>
+  </div>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

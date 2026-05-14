@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg-0:#07081a; --bg-1:#0c0e22; --bg-2:#12152d; --bg-3:#181c3a; --bg-4:#1f2348; --bg-inset:#050615;
+  --line:#232751; --line-2:#2d3360; --line-soft:#1a1d3d;
+  --fg:#eef0fb; --fg-dim:#a0a6d0; --fg-faint:#6c719c; --fg-on-color:#07081a;
+  --cyan:#4ed4ff; --amber:#f5b945; --red:#ff6b6b; --green:#6ee787;
+  --green-soft:#1a3a25; --amber-soft:#4a3818; --red-soft:#4a1c24;
+  --font-ui:'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-pixel:'Press Start 2P', ui-monospace, monospace;
+  --font-mono:'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --fs-3xs:10px; --fs-2xs:11px; --fs-xs:12px; --fs-sm:13px; --fs-base:14px;
+  --r-xs:2px; --r-sm:4px; --r-md:6px;
+  --bevel-up:    inset 0 1px 0 #ffffff10, inset 1px 0 0 #ffffff08, inset -1px 0 0 #00000033, inset 0 -1px 0 #00000055;
+  --bevel-down:  inset 0 1px 0 #00000055, inset 1px 0 0 #00000033, inset -1px 0 0 #ffffff08, inset 0 -1px 0 #ffffff10;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--fg); font: var(--fs-base)/1.5 var(--font-ui); min-height: 100vh; }
+
+.pixel-font { font-family: var(--font-pixel); letter-spacing: 0.04em; text-transform: uppercase; }
+img, svg.pixel-art { image-rendering: pixelated; image-rendering: crisp-edges; }
+.muted-tiny { color: var(--fg-faint); font-size: var(--fs-2xs); line-height: 1.5; margin: 4px 0; }
+
+.options-frame {
+  max-width: 760px;
+  margin: 36px auto;
+  padding: 36px 40px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+
+.options-frame h1 {
+  font: 700 16px/1.2 var(--font-pixel);
+  letter-spacing: 0.06em;
+  margin: 0;
+  color: var(--fg);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 12px;
+}
+.options-frame h2 {
+  font: 700 10px/1 var(--font-pixel);
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.brand-glyph { display: inline-grid; place-items: center; width: 28px; height: 28px; }
+.brand-glyph svg { display: block; }
+
+.options-section {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 18px 20px;
+  box-shadow: var(--bevel-up);
+}
+.options-info {
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 18px 20px;
+  box-shadow: var(--bevel-down);
+}
+.options-info ol { padding-left: 18px; margin: 8px 0 0; color: var(--fg-dim); }
+.options-info li { margin: 6px 0; line-height: 1.55; font-size: var(--fs-sm); }
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow {
+  font-family: var(--font-pixel);
+  font-size: 8px; letter-spacing: 0.12em; color: var(--fg-faint); text-transform: uppercase;
+}
+.field input {
+  width: 100%;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  padding: 8px 10px; border-radius: var(--r-sm);
+  font: var(--fs-sm)/1.2 var(--font-mono);
+  box-shadow: var(--bevel-down);
+}
+.field input:focus { outline: none; border-color: var(--cyan); box-shadow: var(--bevel-down), 0 0 0 2px #4ed4ff33; }
+
+.row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg-3); border: 1px solid var(--line-2); color: var(--fg);
+  padding: 7px 12px; border-radius: var(--r-sm);
+  font: 600 var(--fs-xs)/1 var(--font-ui);
+  cursor: pointer; box-shadow: var(--bevel-up);
+}
+.btn:hover  { background: var(--bg-4); }
+.btn:active { transform: translateY(1px); box-shadow: var(--bevel-down); }
+.btn.primary { background: linear-gradient(180deg, var(--cyan) 0%, #2bb5e0 100%); color: var(--fg-on-color); border-color: #1e9ec5; text-shadow: 0 1px 0 #ffffff40; }
+.btn.warn   { color: var(--amber); border-color: var(--amber-soft); }
+
+code {
+  font: 500 11px/1.4 var(--font-mono);
+  background: var(--bg-inset); color: var(--cyan);
+  padding: 1px 5px; border-radius: 2px;
+  border: 1px solid var(--line);
+}

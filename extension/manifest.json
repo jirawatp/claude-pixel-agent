@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Pixel Agent",
+  "version": "0.1.0",
+  "description": "Visualize your Claude Code agents as pixel-art characters in a customizable office. Inspired by Claw-Empire.",
+  "minimum_chrome_version": "116",
+
+  "action": {
+    "default_title": "Claude Pixel Agent",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
+
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+
+  "options_page": "options/options.html",
+
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "ws://localhost/*",
+    "http://localhost/*",
+    "ws://127.0.0.1/*",
+    "http://127.0.0.1/*"
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["dashboard/dashboard.html", "assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

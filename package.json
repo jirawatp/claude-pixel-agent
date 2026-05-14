@@ -1,0 +1,36 @@
+{
+  "name": "claude-pixel-agent",
+  "version": "0.1.0",
+  "description": "Chrome extension that visualizes live Claude Code sessions as pixel-art characters in a customizable, zone-based office. Inspired by Claw-Empire.",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=18" },
+
+  "workspaces": ["bridge"],
+
+  "scripts": {
+    "start":     "npm --workspace bridge run start",
+    "dev":       "npm --workspace bridge run dev",
+    "bridge":    "npm --workspace bridge run start",
+    "replay":    "node bridge/replay.js",
+    "icons":     "node scripts/make-icons.js",
+    "check":     "find extension bridge scripts -name '*.js' -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check",
+    "serve:dev": "cd extension && python3 -m http.server 8123",
+    "clean":     "rm -rf bridge/node_modules node_modules"
+  },
+
+  "repository": {
+    "type": "git",
+    "directory": "."
+  },
+
+  "keywords": [
+    "claude-code",
+    "chrome-extension",
+    "pixel-art",
+    "visualization",
+    "agent",
+    "hooks"
+  ]
+}

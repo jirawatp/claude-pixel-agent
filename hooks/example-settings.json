@@ -1,0 +1,45 @@
+{
+  "_comment": "Drop these blocks into ~/.claude/settings.json (merge with existing 'hooks'). Update the command path to where you cloned this repo.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "/ABSOLUTE/PATH/TO/claude-pixel-agent/hooks/notify.sh" }
+        ]
+      }
+    ]
+  }
+}

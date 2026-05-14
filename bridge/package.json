@@ -1,0 +1,16 @@
+{
+  "name": "claude-pixel-agent-bridge",
+  "version": "0.1.0",
+  "description": "Local bridge that forwards Claude Code hook events to the Pixel Agent Chrome extension.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev":   "node --watch server.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "license": "Apache-2.0"
+}

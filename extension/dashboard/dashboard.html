@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claude Pixel Agent — Office</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <div class="dashboard-frame">
+
+    <!-- ────────── Top bar ────────── -->
+    <header class="topbar">
+      <div class="brand-block">
+        <span class="brand-glyph">
+          <svg viewBox="0 0 16 16" width="32" height="32" class="pixel-art" aria-hidden="true">
+            <rect x="1" y="2"  width="14" height="9" fill="#1a1d3a" />
+            <rect x="2" y="3"  width="12" height="7" fill="#0a0b18" />
+            <rect x="3" y="4"  width="10" height="5" fill="#4ed4ff" />
+            <rect x="6" y="5"  width="4"  height="2" fill="#a48cff" />
+            <rect x="6" y="7"  width="4"  height="1" fill="#ff5ec4" />
+            <rect x="6" y="11" width="4"  height="2" fill="#1a1d3a" />
+            <rect x="3" y="13" width="10" height="2" fill="#1a1d3a" />
+            <rect x="1" y="2"  width="14" height="1" fill="#3a4070" />
+          </svg>
+        </span>
+        <div class="brand-title">
+          <h1>Claude Pixel Agent</h1>
+          <small>your AI agents at work · v0.4.2</small>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist">
+        <button class="tab is-active" data-tab="office"  role="tab">
+          <span class="tab-icon">🏢</span> Office
+          <span class="count-chip mono" id="agent-count">0</span>
+        </button>
+        <button class="tab" data-tab="avatar"  role="tab"><span class="tab-icon">👤</span> Avatars</button>
+        <button class="tab" data-tab="layout"  role="tab"><span class="tab-icon">▦</span> Layout</button>
+        <button class="tab" data-tab="bridge"  role="tab"><span class="tab-icon">⚡</span> Connection</button>
+      </nav>
+
+      <div class="topbar-right">
+        <div class="bridge-chip">
+          <span class="dot pulse" id="status-dot"></span>
+          <b id="status-text">Connecting…</b>
+          <span class="mono">·</span>
+          <span class="mono" id="status-port">9876</span>
+        </div>
+        <button class="icon-btn" title="Options" id="open-options">⚙</button>
+      </div>
+    </header>
+
+    <!-- ────────── Office area ────────── -->
+    <main class="office-area">
+
+      <section class="office-stage-wrap">
+        <!-- HUD bar -->
+        <div class="office-hud">
+          <div class="hud-left">
+            <span class="hud-pill"><span class="dot green pulse"></span> LIVE</span>
+            <span class="hud-stat"><b class="mono" id="hud-running">0</b> running</span>
+            <span class="hud-divider"></span>
+            <span class="hud-stat"><b class="mono" id="hud-idle">0</b> idle</span>
+            <span class="hud-divider"></span>
+            <span class="hud-stat"><b class="mono" id="hud-tools">0</b> tool calls</span>
+          </div>
+          <div class="hud-right">
+            <span class="eyebrow">OFFICE · 24×16 · 1152×768</span>
+            <button class="icon-btn" id="zoom-out" title="Zoom out">−</button>
+            <button class="icon-btn" id="zoom-in"  title="Zoom in">+</button>
+            <button class="icon-btn" id="zoom-fit" title="Fit">⛶</button>
+          </div>
+        </div>
+
+        <!-- CRT frame -->
+        <div class="office-crt">
+          <div class="crt-screen">
+            <canvas id="office" width="1152" height="768"></canvas>
+            <div class="scanlines" id="scanlines"></div>
+            <div class="crt-vignette" id="crt-vignette"></div>
+            <div class="crt-flicker" id="crt-flicker" hidden></div>
+            <div class="stage-hint" id="stage-hint" hidden>
+              No agents yet — start a Claude Code session, or
+              <button class="link" id="demo-btn">load demo</button>.
+            </div>
+          </div>
+          <div class="zone-legend" id="zone-legend">
+            <div class="zl-title eyebrow">ZONES</div>
+          </div>
+          <div class="minimap" id="minimap">
+            <div class="mm-title eyebrow">MAP</div>
+            <svg class="mm-svg pixel-art" viewBox="0 0 24 16" id="mm-svg"></svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right rail -->
+      <aside class="side-rail" id="side">
+        <section class="agent-panel scrollable" data-panel="office" id="panel-office"></section>
+        <section class="side-panel scrollable"  data-panel="avatar" id="panel-avatar" hidden></section>
+        <section class="side-panel scrollable"  data-panel="layout" id="panel-layout" hidden></section>
+        <section class="side-panel scrollable"  data-panel="bridge" id="panel-bridge" hidden></section>
+      </aside>
+    </main>
+
+    <!-- ────────── Activity ticker ────────── -->
+    <footer class="ticker-wrap">
+      <div class="ticker-head">
+        <div class="ticker-title">
+          <span class="dot cyan pulse"></span>
+          <span class="pixel-font">Activity</span>
+        </div>
+        <div class="ticker-stats mono">
+          <span><b id="ticker-events">0</b> events</span>
+          <span class="dim">·</span>
+          <span><b id="ticker-last-min">0</b> last min</span>
+          <span class="dim">·</span>
+          <span><b id="ticker-tools">0</b> tool calls</span>
+        </div>
+        <div class="ticker-filter">
+          <button class="seg is-active" data-filter="all">All</button>
+          <button class="seg" data-filter="tools">Tools</button>
+          <button class="seg" data-filter="chat">Chat</button>
+        </div>
+      </div>
+      <div class="ticker-rail scrollable" id="ticker-rail">
+        <div class="ticker-now-marker">
+          <span class="now-dot"></span>
+          <span class="now-label pixel-font">NOW</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

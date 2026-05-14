@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Pixel Agent — Options</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main class="options-frame scrollable">
+    <h1>
+      <span class="brand-glyph">
+        <svg viewBox="0 0 16 16" width="28" height="28" class="pixel-art" aria-hidden="true">
+          <rect x="1" y="2"  width="14" height="9" fill="#1a1d3a" />
+          <rect x="2" y="3"  width="12" height="7" fill="#0a0b18" />
+          <rect x="3" y="4"  width="10" height="5" fill="#4ed4ff" />
+          <rect x="6" y="5"  width="4"  height="2" fill="#a48cff" />
+          <rect x="6" y="7"  width="4"  height="1" fill="#ff5ec4" />
+          <rect x="6" y="11" width="4"  height="2" fill="#1a1d3a" />
+          <rect x="3" y="13" width="10" height="2" fill="#1a1d3a" />
+        </svg>
+      </span>
+      Claude Pixel Agent
+    </h1>
+
+    <section class="options-section">
+      <h2>Bridge Connection</h2>
+      <label class="field">
+        <span class="eyebrow">WebSocket URL</span>
+        <input id="bridge-url" type="text" placeholder="ws://127.0.0.1:9876/ws" />
+      </label>
+      <div class="row-actions" style="margin-top:12px">
+        <button id="save" class="btn primary">Save</button>
+        <span id="saved" class="muted-tiny" hidden>Saved.</span>
+      </div>
+    </section>
+
+    <section class="options-section">
+      <h2>Office</h2>
+      <p class="muted-tiny" style="margin-bottom:12px">
+        Avatar, layout, and agent customizations live in the dashboard.
+      </p>
+      <div class="row-actions">
+        <button id="open-dashboard" class="btn primary">Open dashboard ⤢</button>
+        <button id="reset-data" class="btn warn">Reset all saved data</button>
+      </div>
+    </section>
+
+    <section class="options-info">
+      <h2>Setup</h2>
+      <ol>
+        <li>Install bridge: <code>npm install &amp;&amp; npm start</code> at the repo root.</li>
+        <li>Open the dashboard, switch to the <strong>Connection</strong> tab, and click <strong>Install hooks automatically</strong>.</li>
+        <li>Open any Claude Code session — your agent will appear in the office.</li>
+      </ol>
+    </section>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>
