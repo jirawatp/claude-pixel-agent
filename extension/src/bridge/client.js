@@ -24,6 +24,31 @@ export class BridgeClient {
     this.port = null;
     this.usedDesks = new Set(); // "x,y" of claimed desk spots
     this.homeDesks = new Map(); // sessionId → { x, y, zone }
+    // Pending Task tool prompts captured from a parent's PreToolUse.
+    // The next new session_id that appears claims one for its persona.
+    this.pendingTaskPrompts = []; // [{ prompt, subagent_type, parentId, ts, claimed }]
+  }
+
+  rememberTaskPrompt(parentSessionId, taskInput) {
+    const prompt = taskInput?.prompt ?? taskInput?.description ?? "";
+    if (!prompt) return;
+    // Prune anything older than 10 minutes
+    const cutoff = Date.now() - 10 * 60 * 1000;
+    this.pendingTaskPrompts = this.pendingTaskPrompts.filter(p => p.ts > cutoff);
+    this.pendingTaskPrompts.push({
+      prompt,
+      subagent_type: taskInput.subagent_type ?? "general-purpose",
+      parentId: parentSessionId,
+      ts: Date.now(),
+      claimed: false
+    });
+  }
+
+  claimTaskPrompt() {
+    for (const p of this.pendingTaskPrompts) {
+      if (!p.claimed) { p.claimed = true; return p; }
+    }
+    return null;
   }
 
   connect() {
@@ -104,14 +129,39 @@ export class BridgeClient {
     const c = this.renderer.getCharacter(sessionId);
     if (c) return c;
     const stored = this.agentDefaults[sessionId];
-    const name = stored?.name ?? ev.agent_name ?? deriveName(sessionId, ev.cwd);
+
+    // Brand-new session — try to claim a buffered Task prompt so we can use
+    // its BMad persona name. This catches the case where a parent fired
+    // PreToolUse with a "You are Atlas …" prompt but Claude Code didn't fire
+    // UserPromptSubmit or SubagentStart for the child.
+    let name, persona, titleLocked = false;
+    if (stored?.name) {
+      name = stored.name;
+    } else if (ev.type !== "subagent_start") {
+      const claimed = this.claimTaskPrompt();
+      if (claimed) {
+        const derived = deriveTitle(claimed.prompt);
+        if (derived) {
+          name = derived;
+          persona = extractPersonaSummary(claimed.prompt);
+          titleLocked = true;
+        }
+      }
+      if (!name) name = ev.agent_name ?? deriveName(sessionId, ev.cwd);
+    } else {
+      name = ev.agent_name ?? deriveName(sessionId, ev.cwd);
+    }
+
     const customization = stored?.customization ?? defaultCustomization(hash(sessionId));
     const home = this.homeDeskFor(sessionId, name);
     const created = this.renderer.addCharacter({
       id: sessionId, name, customization, x: home.x, y: home.y
     });
     created.role = roleForName(name);
-    created.cwd  = ev.cwd ?? null;
+    if (persona)     created.persona     = persona;
+    if (titleLocked) created.titleLocked = true;
+    if (ev.cwd)      created.cwd         = ev.cwd;
+
     upsertAgent(sessionId, { name, customization, cwd: ev.cwd });
     return created;
   }
@@ -181,11 +231,13 @@ export class BridgeClient {
         c.currentTool = ev.tool_name;
         c.statusColor = PALETTE.statusWorking;
 
-        // Special case: the Task tool spawns a subagent. Synthesize a
-        // SubagentStart so the child gets its own pixel character — Claude
-        // Code may not fire a separate SubagentStart hook.
+        // Special case: the Task tool spawns a subagent. Capture the prompt
+        // so the next new session_id that fires an event can claim it as its
+        // persona (since Claude Code may not fire UserPromptSubmit /
+        // SubagentStart for the child, and the child's session_id isn't
+        // derivable from the parent).
         if (ev.tool_name === "Task" && ev.tool_input) {
-          this.handleSyntheticSubagentStart(sessionId, ev.tool_input);
+          this.rememberTaskPrompt(sessionId, ev.tool_input);
         }
 
         // Route to the right room for this tool.
@@ -281,40 +333,6 @@ export class BridgeClient {
   stopSession(sessionId) {
     this.handleEvent({ type: EVENT_TYPES.STOP, sessionId, ts: Date.now() });
   }
-
-  /**
-   * Called when a parent agent invokes the Task tool. The Task tool spawns
-   * a subagent internally; in Claude Code's hook stream we usually see this
-   * as a PreToolUse on the parent (with subagent_type + prompt as input),
-   * not as a separate SubagentStart event. So we synthesize a SubagentStart
-   * for the child so it appears as its own pixel character.
-   *
-   * Stable subagent id = `${parentId}::task-${hash(prompt)}` so re-running the
-   * same Task doesn't spawn duplicate ghosts.
-   */
-  handleSyntheticSubagentStart(parentSessionId, taskInput) {
-    const prompt = taskInput.prompt ?? taskInput.description ?? "";
-    const stype  = taskInput.subagent_type ?? "general-purpose";
-    if (!prompt && stype === "general-purpose") return;
-    const childId = `${parentSessionId}::task-${shortHash(prompt + "|" + stype)}`;
-    if (this.renderer.getCharacter(childId)) return; // already spawned
-    this.handleEvent({
-      type: EVENT_TYPES.SUBAGENT_START,
-      sessionId: childId,
-      parentId: parentSessionId,
-      subagent_type: stype,
-      prompt,
-      ts: Date.now()
-    });
-  }
-}
-
-function shortHash(s) {
-  let h = 0;
-  for (let i = 0; i < (s ?? "").length; i++) {
-    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h).toString(36).slice(0, 8);
 }
 
 /**
